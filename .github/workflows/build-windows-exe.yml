@@ -28,11 +28,11 @@ jobs:
       # If your imports live under src/, keep --paths src.
       # Add any needed --add-data here (repeat flag for each folder/file).
       - name: Build EXE
-        run: |
-          pyinstaller --noconsole --onefile ^
-            --name VetUnal ^
-            --icon app.ico ^
-            --paths src ^
+        run: >
+          pyinstaller --noconsole --onefile `
+            --name VetUnal `
+            --icon app.ico `
+            --paths src `
             main.py
 
       - name: Upload artifact
