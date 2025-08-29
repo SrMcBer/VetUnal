@@ -2,8 +2,10 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import threading
 import os
-
+from PIL import Image, ImageTk  # Add this import
 from src.pdf.main_processor import process_pdfs
+from src.ocr.text_classifier import PageType
+from src.pdf.converter import pdf_page_to_image 
 
 class PDFApp:
     def __init__(self, root):
@@ -35,7 +37,12 @@ class PDFApp:
         self.output_dir = tk.StringVar()
         self.start_value = tk.StringVar(value="1")
         self.processing = False
-
+        self.correction_data = {}
+        self.correction_event = None
+        self.pending_changes = {}
+        self.current_preview_image = None
+        self.preview_photo = None
+        
     def setup_styles(self):
         """Configure ttk styles for better appearance"""
         style = ttk.Style()
@@ -69,6 +76,7 @@ class PDFApp:
         self.create_header()
         # self.create_main_content()
         self.create_scrollable_content()
+        self.create_correction_ui() # Create the correction UI
         self.create_footer()
 
     def create_header(self):
@@ -222,11 +230,11 @@ class PDFApp:
 
     def create_footer(self):
         """Create footer with action buttons"""
-        footer_frame = ttk.Frame(self.root)
-        footer_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=(10, 20))
+        self.footer_frame = ttk.Frame(self.root)
+        self.footer_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=(10, 20))
 
         # Button frame
-        button_frame = ttk.Frame(footer_frame)
+        button_frame = ttk.Frame(self.footer_frame)
         button_frame.pack(anchor="center")
         
         # Process button
@@ -245,6 +253,510 @@ class PDFApp:
         clear_btn = ttk.Button(button_frame, text="Clear All", 
                                 command=self.clear_all_fields)
         clear_btn.pack(side="left", padx=(10, 0))
+
+    def create_correction_ui(self):
+        """Create the UI for correcting patient records."""
+        self.correction_frame = ttk.Frame(self.root)
+        self.correction_frame.grid_columnconfigure(0, weight=1)
+        self.correction_frame.grid_rowconfigure(1, weight=1)
+        
+        # Initialize selection tracking
+        self.selected_page_item = None
+        self.selected_page_num = None
+
+        # Header
+        header_text = "Manual Record Correction - Review and Fix Classification Issues"
+        ttk.Label(self.correction_frame, text=header_text, style='Title.TLabel').grid(row=0, column=0, pady=(0, 10))
+        
+        # Instructions label
+        instructions = "Records with issues are highlighted in red. Click on any page to preview and edit its classification."
+        ttk.Label(self.correction_frame, text=instructions, font=('Arial', 9), 
+                foreground='#7f8c8d').grid(row=0, column=0, pady=(25, 10), sticky="w")
+        
+        # Create main content frame
+        content_frame = ttk.Frame(self.correction_frame)
+        content_frame.grid(row=1, column=0, sticky="nsew", pady=(0, 10))
+        content_frame.grid_columnconfigure(0, weight=2)
+        content_frame.grid_columnconfigure(1, weight=1)
+        content_frame.grid_rowconfigure(0, weight=1)
+        
+        # Left side: Treeview
+        tree_frame = ttk.Frame(content_frame)
+        tree_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        tree_frame.grid_columnconfigure(0, weight=1)
+        tree_frame.grid_rowconfigure(0, weight=1)
+        
+        # Treeview for records
+        self.records_tree = ttk.Treeview(tree_frame, columns=("PageType", "Issues"), show="tree headings", height=15)
+        self.records_tree.heading("#0", text="Record / Page")
+        self.records_tree.heading("PageType", text="Classification")
+        self.records_tree.heading("Issues", text="Issues")
+        
+        # Configure column widths
+        self.records_tree.column("#0", width=250, minwidth=200)
+        self.records_tree.column("PageType", width=120, minwidth=100)
+        self.records_tree.column("Issues", width=300, minwidth=250)
+        
+        # Add scrollbar
+        tree_scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.records_tree.yview)
+        self.records_tree.configure(yscrollcommand=tree_scrollbar.set)
+        
+        # Grid treeview and scrollbar
+        self.records_tree.grid(row=0, column=0, sticky="nsew")
+        tree_scrollbar.grid(row=0, column=1, sticky="ns")
+
+        # Right side: Preview and editing
+        right_frame = ttk.Frame(content_frame)
+        right_frame.grid(row=0, column=1, sticky="nsew")
+        right_frame.grid_columnconfigure(0, weight=1)
+        right_frame.grid_rowconfigure(0, weight=1)
+        right_frame.grid_rowconfigure(1, weight=0)
+        
+        # Preview frame
+        preview_frame = ttk.LabelFrame(right_frame, text="Page Preview", padding=10)
+        preview_frame.grid(row=0, column=0, sticky="nsew", pady=(0, 10))
+        preview_frame.grid_columnconfigure(0, weight=1)
+        preview_frame.grid_rowconfigure(1, weight=1)
+        
+        self.preview_label = ttk.Label(preview_frame, text="Select a page to preview", 
+                                    font=('Arial', 10), foreground='#7f8c8d')
+        self.preview_label.grid(row=0, column=0, pady=(0, 10))
+        
+        self.preview_canvas = tk.Canvas(preview_frame, bg='white', width=250, height=300, 
+                                    highlightthickness=1, highlightcolor="#cccccc")
+        self.preview_canvas.grid(row=1, column=0, sticky="nsew")
+        
+        # Editing controls frame
+        edit_frame = ttk.LabelFrame(right_frame, text="Change Classification", padding=10)
+        edit_frame.grid(row=1, column=0, sticky="ew")
+        edit_frame.grid_columnconfigure(0, weight=1)
+        
+        # Current type display
+        self.current_type_label = ttk.Label(edit_frame, text="Select a page to edit", 
+                                        font=('Arial', 10, 'bold'))
+        self.current_type_label.grid(row=0, column=0, pady=(0, 10))
+        
+        # Buttons for each page type
+        from src.ocr.text_classifier import PageType
+        
+        # Create style for selected button
+        style = ttk.Style()
+        style.configure("Selected.TButton", relief="solid", borderwidth=2)
+        
+        button_frame = ttk.Frame(edit_frame)
+        button_frame.grid(row=1, column=0, pady=(0, 10))
+        
+        self.type_buttons = []
+        
+        # Historia Clinica button
+        historia_btn = ttk.Button(button_frame, text="Historia Clínica", 
+                                command=lambda: self._change_page_type(PageType.HISTORIA_CLINICA),
+                                state="disabled")
+        historia_btn.pack(side="top", fill="x", pady=2)
+        self.type_buttons.append(historia_btn)
+        
+        # Cedula button
+        cedula_btn = ttk.Button(button_frame, text="Cédula", 
+                            command=lambda: self._change_page_type(PageType.CEDULA),
+                            state="disabled")
+        cedula_btn.pack(side="top", fill="x", pady=2)
+        self.type_buttons.append(cedula_btn)
+        
+        # Recibo button
+        recibo_btn = ttk.Button(button_frame, text="Recibo", 
+                            command=lambda: self._change_page_type(PageType.RECIBO),
+                            state="disabled")
+        recibo_btn.pack(side="top", fill="x", pady=2)
+        self.type_buttons.append(recibo_btn)
+        
+        # Unknown button
+        unknown_btn = ttk.Button(button_frame, text="Unknown/Other", 
+                                command=lambda: self._change_page_type(PageType.UNKNOWN),
+                                state="disabled")
+        unknown_btn.pack(side="top", fill="x", pady=2)
+        self.type_buttons.append(unknown_btn)
+        
+        # Feedback label
+        self.edit_feedback_label = ttk.Label(edit_frame, text="", font=('Arial', 9))
+        self.edit_feedback_label.grid(row=2, column=0, pady=(5, 0))
+        
+        # Bind events
+        self.records_tree.bind("<Button-1>", self.on_tree_single_click)
+
+        # Summary label
+        self.summary_label = ttk.Label(self.correction_frame, text="", font=('Arial', 9))
+        self.summary_label.grid(row=2, column=0, pady=(5, 10), sticky="w")
+
+        # Action buttons
+        btn_frame = ttk.Frame(self.correction_frame)
+        btn_frame.grid(row=3, column=0, pady=(10, 0))
+
+        apply_btn = ttk.Button(btn_frame, text="Apply Changes and Continue", command=self.apply_corrections)
+        apply_btn.pack(side="left", padx=5)
+
+        proceed_anyway_btn = ttk.Button(btn_frame, text="Proceed Without Changes", command=self.proceed_without_corrections)
+        proceed_anyway_btn.pack(side="left", padx=5)
+
+        # Initially hide this frame
+        self.correction_frame.grid_remove()
+
+    def handle_record_correction(self, patient_records, all_pages, folder_names):
+        """Callback from the worker thread to handle record correction in the GUI."""
+        self.correction_event = threading.Event()
+        self.correction_data = {
+            'pages': all_pages,
+            'proceed': False
+        }
+
+        # Schedule GUI updates in the main thread
+        self.root.after(0, self.show_correction_ui, patient_records, all_pages, folder_names)
+
+        # Block the worker thread until the user makes a decision in the GUI
+        self.correction_event.wait()
+        
+        return self.correction_data
+
+    def show_correction_ui(self, patient_records, all_pages, folder_names):
+        """Show the correction UI and hide the main UI."""
+        # Hide main content
+        self.canvas.grid_remove()
+        self.scrollbar.grid_remove()
+        self.footer_frame.grid_remove()
+
+        # Show correction UI
+        self.correction_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=10)
+
+        # Clear previous data
+        self.records_tree.delete(*self.records_tree.get_children())
+        self.pending_changes = {}
+        
+        pages_map = {p.page_number: p for p in all_pages}
+        records_with_issues = []
+        records_without_issues = []
+        
+        # Separate records with and without issues
+        for i, record in enumerate(patient_records):
+            folder_name = folder_names[i] if i < len(folder_names) else "NO FOLDER"
+            record_info = (i, record, folder_name)
+            
+            if record.has_issues:
+                records_with_issues.append(record_info)
+            else:
+                records_without_issues.append(record_info)
+        
+        # Add records with issues first (highlighted)
+        for i, record, folder_name in records_with_issues:
+            # Format issues text with proper wrapping
+            issues_text = self._format_issues_text(record)
+            
+            record_node = self.records_tree.insert("", "end", 
+                                                text=f"[ISSUE] Record {i+1} ({folder_name})", 
+                                                values=("", issues_text),
+                                                tags=("error_record",))
+            
+            self._add_pages_to_record_node(record_node, record, pages_map)
+        
+        # Add separator if both types exist
+        if records_with_issues and records_without_issues:
+            self.records_tree.insert("", "end", 
+                                    text="── Records Without Issues ──", 
+                                    values=("", ""),
+                                    tags=("separator",))
+        
+        # Add records without issues
+        for i, record, folder_name in records_without_issues:
+            record_node = self.records_tree.insert("", "end", 
+                                                text=f"[OK] Record {i+1} ({folder_name})", 
+                                                values=("", "No issues"),
+                                                tags=("good_record",))
+            
+            self._add_pages_to_record_node(record_node, record, pages_map)
+        
+        # Configure tags for styling - FIXED COLORS
+        self.records_tree.tag_configure("error_record", background="#ffebee", foreground="#d32f2f")
+        self.records_tree.tag_configure("good_record", background="#e8f5e8", foreground="#388e3c")
+        self.records_tree.tag_configure("separator", background="#f5f5f5", foreground="#666666")
+        self.records_tree.tag_configure("unknown_page", background="#fff3e0", foreground="#f57c00")  # Orange background, darker text
+        self.records_tree.tag_configure("normal_page", background="white", foreground="#333333")  # Dark text on white
+        
+        # Update summary
+        total_records = len(patient_records)
+        error_count = len(records_with_issues)
+        
+        self.summary_label.config(
+            text=f"Total: {total_records} records | Issues found: {error_count} records | "
+                f"Click any page to preview, then use buttons to change classification"
+        )
+        
+        # Expand records with issues automatically
+        for child in self.records_tree.get_children():
+            item_text = self.records_tree.item(child, "text")
+            if "[ISSUE]" in item_text:
+                self.records_tree.item(child, open=True)
+
+    def _format_issues_text(self, record):
+        """Format issues text to prevent overflow."""
+        if hasattr(record, 'issues') and record.issues:
+            # Join issues and truncate if too long
+            issues_text = "; ".join(record.issues)
+            if len(issues_text) > 80:  # Adjust based on your column width
+                issues_text = issues_text[:77] + "..."
+            return issues_text
+        else:
+            return "Unknown issues"
+
+    def _add_pages_to_record_node(self, record_node, record, pages_map):
+        """Helper method to add pages to a record node in the treeview."""
+        # Sort all pages in the record
+        all_record_pages = []
+        
+        for attr_name in ['historia_pages', 'cedula_pages', 'recibo_pages', 'unknown_pages']:
+            if hasattr(record, attr_name):
+                pages = getattr(record, attr_name, [])
+                all_record_pages.extend(pages)
+        
+        # Sort and add pages
+        for page_num in sorted(set(all_record_pages)):
+            page_info = pages_map.get(page_num)
+            if page_info:
+                page_type_name = page_info.page_type.name if hasattr(page_info.page_type, 'name') else str(page_info.page_type)
+                
+                # Determine styling based on page type
+                is_unknown = "UNKNOWN" in page_type_name
+                
+                # Use clear text indicators instead of emojis
+                if is_unknown:
+                    page_icon = "[NEEDS REVIEW]"
+                    tag = "unknown_page"
+                else:
+                    page_icon = ""
+                    tag = "normal_page"
+                
+                display_text = f"  Page {page_num} {page_icon}".strip()
+                
+                # Create page node - don't try to set column #0 afterwards
+                page_node = self.records_tree.insert(record_node, "end", 
+                                    text=display_text, 
+                                    values=(page_type_name, ""),
+                                    tags=(tag,))
+                
+                # Store page number as metadata (optional, for easy access)
+                # You can store it in a dict if needed: self.page_nodes[page_node] = page_num
+
+    def on_tree_single_click(self, event):
+        """Handle single clicks for page selection and editing setup."""
+        item_id = self.records_tree.identify_row(event.y)
+        if item_id and self.records_tree.parent(item_id):  # Only for page items
+            # Show preview
+            self.show_page_preview(item_id)
+            
+            # Set up editing controls
+            self._setup_page_editing(item_id)
+
+    def on_tree_double_click(self, event):
+        """Handle double-clicks - same as single click for now."""
+        self.on_tree_single_click(event)
+
+    def _setup_page_editing(self, item_id):
+        """Set up the editing controls for the selected page."""
+        # Extract page number from text
+        item_text = self.records_tree.item(item_id, "text")
+        import re
+        match = re.search(r'Page (\d+)', item_text)
+        if not match:
+            return
+        
+        page_num = int(match.group(1))
+        current_type = self.records_tree.set(item_id, "PageType")
+        
+        # Store current selection
+        self.selected_page_item = item_id
+        self.selected_page_num = page_num
+        
+        # Update the editing controls
+        self._update_editing_controls(current_type)
+
+    def _update_editing_controls(self, current_type):
+        """Update the editing control buttons."""
+        # Update the current type label
+        self.current_type_label.config(text=f"Current: {current_type}")
+        
+        # Enable all buttons
+        for btn in self.type_buttons:
+            btn.config(state="normal")
+        
+        # Highlight current type button
+        from src.ocr.text_classifier import PageType
+        for page_type, btn in zip([PageType.HISTORIA_CLINICA, PageType.CEDULA, PageType.RECIBO, PageType.UNKNOWN], 
+                                self.type_buttons):
+            if page_type.name == current_type:
+                btn.config(style="Selected.TButton")
+            else:
+                btn.config(style="TButton")
+
+    def _change_page_type(self, new_type):
+        """Change the type of the currently selected page."""
+        if not hasattr(self, 'selected_page_item') or not self.selected_page_item:
+            return
+        
+        item_id = self.selected_page_item
+        page_num = self.selected_page_num
+        
+        # Update the display
+        self.records_tree.set(item_id, "PageType", new_type.name)
+        
+        # Store the change
+        self.pending_changes[page_num] = new_type
+        
+        # Update visual feedback
+        item_text = self.records_tree.item(item_id, "text")
+        if new_type == PageType.UNKNOWN:
+            if "[NEEDS REVIEW]" not in item_text:
+                updated_text = item_text + " [NEEDS REVIEW]"
+                self.records_tree.item(item_id, text=updated_text)
+            self.records_tree.item(item_id, tags=("unknown_page",))
+        else:
+            if "[NEEDS REVIEW]" in item_text:
+                updated_text = item_text.replace(" [NEEDS REVIEW]", "")
+                self.records_tree.item(item_id, text=updated_text)
+            self.records_tree.item(item_id, tags=("normal_page",))
+        
+        # Update the editing controls
+        self._update_editing_controls(new_type.name)
+        
+        # Show feedback
+        self.edit_feedback_label.config(text=f"Changed to {new_type.name}", foreground="#27ae60")
+        self.root.after(2000, lambda: self.edit_feedback_label.config(text=""))
+
+    def apply_corrections(self):
+        """Apply changes from the Treeview and resume processing."""
+        # Apply pending changes to the pages data
+        if self.pending_changes:
+            pages_map = {p.page_number: p for p in self.correction_data['pages']}
+            for page_num, new_type in self.pending_changes.items():
+                if page_num in pages_map:
+                    pages_map[page_num].page_type = new_type
+            
+            # The 'pages' list in correction_data is updated by reference
+
+        self.correction_data['proceed'] = True
+        self.hide_correction_ui()
+        self.correction_event.set()
+
+    def proceed_without_corrections(self):
+        """Proceed without applying any corrections."""
+        self.correction_data['proceed'] = True
+        self.hide_correction_ui()
+        self.correction_event.set()
+
+    def hide_correction_ui(self):
+        """Hide the correction UI and show the main UI."""
+        self.correction_frame.grid_remove()
+        self.canvas.grid()
+        self.scrollbar.grid()
+        self.footer_frame.grid()
+
+    def show_page_preview(self, item_id):
+        """Show preview for the selected page."""
+        item_text = self.records_tree.item(item_id, "text")
+        
+        # Extract page number
+        import re
+        match = re.search(r'Page (\d+)', item_text)
+        if not match:
+            return
+        
+        page_num = int(match.group(1))
+        page_type = self.records_tree.set(item_id, "PageType")
+        
+        # Update preview label
+        self.preview_label.config(text=f"Page {page_num} - {page_type}")
+        
+        # Clear canvas
+        self.preview_canvas.delete("all")
+        
+        # Get the main PDF path
+        main_pdf_path = self.main_path.get()
+        if not main_pdf_path or not os.path.exists(main_pdf_path):
+            self.preview_canvas.create_text(125, 175, 
+                                            text="Main PDF not available\nfor preview", 
+                                            justify=tk.CENTER, fill="#666666", font=("Arial", 10))
+            return
+        
+        # Load and display the PDF page in a separate thread to avoid UI blocking
+        threading.Thread(
+            target=self._load_pdf_preview,
+            args=(main_pdf_path, page_num),
+            daemon=True
+        ).start()
+
+    def _load_pdf_preview(self, pdf_path, page_num):
+        """Load PDF page preview in background thread."""
+        try:
+            # Generate image from PDF page
+            pil_image = pdf_page_to_image(pdf_path, page_num, zoom=1.0)  # Lower zoom for preview
+            
+            # Resize image to fit canvas while maintaining aspect ratio
+            canvas_width = 250
+            canvas_height = 350
+            
+            # Calculate scaling
+            img_width, img_height = pil_image.size
+            scale_w = canvas_width / img_width
+            scale_h = canvas_height / img_height
+            scale = min(scale_w, scale_h, 1.0)  # Don't upscale
+            
+            new_width = int(img_width * scale)
+            new_height = int(img_height * scale)
+            
+            # Resize image
+            resized_image = pil_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            # Convert to PhotoImage for tkinter
+            photo = ImageTk.PhotoImage(resized_image)
+            
+            # Schedule UI update on main thread
+            self.root.after(0, self._update_preview_canvas, photo, new_width, new_height)
+            
+        except Exception as e:
+            error_msg = f"Failed to load preview:\n{str(e)}"
+            self.root.after(0, self._show_preview_error, error_msg)
+
+    def _update_preview_canvas(self, photo, img_width, img_height):
+        """Update preview canvas with the loaded image (runs on main thread)."""
+        # Store reference to prevent garbage collection
+        self.preview_photo = photo
+        
+        # Clear canvas
+        self.preview_canvas.delete("all")
+        
+        # Center the image
+        canvas_width = self.preview_canvas.winfo_width()
+        canvas_height = self.preview_canvas.winfo_height()
+        
+        # Handle case where canvas hasn't been drawn yet
+        if canvas_width <= 1:
+            canvas_width = 250
+        if canvas_height <= 1:
+            canvas_height = 350
+            
+        x = (canvas_width - img_width) // 2
+        y = (canvas_height - img_height) // 2
+        
+        # Create image on canvas
+        self.preview_canvas.create_image(x, y, anchor="nw", image=photo)
+        
+        # Add a border around the image
+        self.preview_canvas.create_rectangle(x-1, y-1, x+img_width+1, y+img_height+1, 
+                                            outline="#cccccc", width=1)
+
+    def _show_preview_error(self, error_msg):
+        """Show error message in preview canvas (runs on main thread)."""
+        self.preview_canvas.delete("all")
+        self.preview_canvas.create_text(125, 175, 
+                                        text=error_msg, 
+                                        justify=tk.CENTER, fill="#e74c3c", 
+                                        font=("Arial", 9), width=200)
 
     def create_file_input(self, parent, label_text, variable, row):
         """Create a file input row with label, entry, and browse button"""
@@ -435,7 +947,8 @@ class PDFApp:
         try:
             microchip_ids = process_pdfs(
                 control, main, output, start_val,
-                progress_callback=self.update_progress
+                progress_callback=self.update_progress,
+                correction_callback=self.handle_record_correction
             )
             
             def on_success():
@@ -448,14 +961,14 @@ class PDFApp:
             self.root.after(0, on_success)
 
         except Exception as e:
-            def on_error():
+            def on_error(exc):
                 self.set_processing_state(False)
                 self.status_label.config(text="Processing failed")
-                self.details_label.config(text=f"Error: {str(e)}")
+                self.details_label.config(text=f"Error: {str(exc)}")
                 messagebox.showerror("Processing Error", 
-                                    f"An error occurred during processing:\n\n{str(e)}")
+                                    f"An error occurred during processing:\n\n{str(exc)}")
             
-            self.root.after(0, on_error)
+            self.root.after(0, on_error, e)
 
     def cancel_processing(self):
         """Cancel the current processing operation"""

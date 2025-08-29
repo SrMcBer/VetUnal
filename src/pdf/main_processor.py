@@ -28,7 +28,8 @@ class MainPDFProcessor:
         main_pdf_path: str, 
         output_base_dir: str, 
         folder_names: List[str],
-        progress_callback: Optional[Callable] = None
+        progress_callback: Optional[Callable] = None,
+        correction_callback: Optional[Callable] = None
     ) -> None:
         """
         Split the main PDF based on "HISTORIA CLINICA" markers into patient folders.
@@ -99,6 +100,26 @@ class MainPDFProcessor:
             
             # Save patient records after validation
             self._save_patient_records_debug(patient_records, debug_dir, f"{pdf_name}_{timestamp}_03_patient_records.txt")
+
+            # --- NEW CORRECTION STEP ---
+            if correction_callback and any(r.has_issues for r in patient_records):
+                self.logger.info("Entering interactive correction mode...")
+                try:
+                    corrected_data = correction_callback(patient_records, pages, folder_names)
+                    
+                    # Update records based on what the callback returns
+                    if corrected_data:
+                        pages = corrected_data.get('pages', pages)
+                        patient_records = self.record_grouper.group_pages_into_patient_records(pages)
+                        self.record_grouper.validate_patient_records(patient_records)
+                        
+                        if not corrected_data.get('proceed', False):
+                            self.logger.warning("User chose to abort processing after review. Halting.")
+                            return
+                except Exception as e:
+                    self.logger.error(f"Error during correction callback: {e}")
+                    raise RuntimeError(f"Failed during interactive correction: {e}")
+            # --- END OF NEW STEP ---
             
             if progress_callback:
                 progress_callback("splitting_main_pdf", 2, total_steps, f"Found {len(patient_records)} patient records")
@@ -333,7 +354,8 @@ class MainPDFProcessor:
         main_pdf_path: str, 
         output_base_dir: str, 
         clinic_history: int,
-        progress_callback: Optional[Callable] = None
+        progress_callback: Optional[Callable] = None,
+        correction_callback: Optional[Callable] = None
     ) -> List[str]:
         """
         Complete PDF processing workflow from control sheet to final folders.
@@ -344,6 +366,7 @@ class MainPDFProcessor:
             output_base_dir: Base directory for output
             clinic_history: Starting clinic history number
             progress_callback: Optional progress callback
+            correction_callback: Optional callback for correcting records
             
         Returns:
             List of created folder names
@@ -369,7 +392,8 @@ class MainPDFProcessor:
                 main_pdf_path, 
                 output_base_dir, 
                 folder_names,
-                progress_callback
+                progress_callback,
+                correction_callback
             )
             
             if progress_callback:
@@ -587,10 +611,46 @@ def process_pdfs(
     main_pdf_path: str, 
     output_base_dir: str, 
     clinic_history: int,
-    progress_callback: Optional[Callable] = None
+    progress_callback: Optional[Callable] = None,
+    correction_callback: Optional[Callable] = None
 ) -> List[str]:
     """
     Convenience function that orchestrates the complete PDF processing workflow.
+    
+    Args:
+        control_sheet_path: Path to control sheet PDF
+        main_pdf_path: Path to main PDF file
+        output_base_dir: Base directory for output
+        clinic_history: Starting clinic history number
+        progress_callback: Optional progress callback
+        correction_callback: Optional callback for correcting records
+        
+    Returns:
+        List of created folder names
+        
+    Raises:
+        RuntimeError: If processing fails
+    """
+    processor = create_main_processor()
+    return processor.process_complete_workflow(
+        control_sheet_path, 
+        main_pdf_path, 
+        output_base_dir, 
+        clinic_history,
+        progress_callback,
+        correction_callback
+    )
+
+# Alternative convenience function using the class method
+def process_pdfs_advanced(
+    control_sheet_path: str, 
+    main_pdf_path: str, 
+    output_base_dir: str, 
+    clinic_history: int,
+    progress_callback: Optional[Callable] = None
+) -> List[str]:
+    """
+    Advanced version using the class-based approach with more features.
     
     Args:
         control_sheet_path: Path to control sheet PDF
