@@ -17,7 +17,7 @@ class PDFApp:
 
     def setup_window(self):
         """Configure main window properties"""
-        self.root.title("PDF Processor - Document Processing Tool")
+        self.root.title("Procesador de PDF - Herramienta de Procesamiento de Documentos")
         self.root.geometry("700x780")
         self.root.minsize(600, 500)
                 # Center the window
@@ -84,12 +84,11 @@ class PDFApp:
         header_frame = ttk.Frame(self.root)
         header_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=(20, 10))
         
-        title_label = ttk.Label(header_frame, text="PDF Document Processor", 
-                                style='Title.TLabel')
+        title_label = ttk.Label(header_frame, text="Procesador de Documentos PDF")
         title_label.pack()
         
         subtitle_label = ttk.Label(header_frame, 
-                                    text="Process and split PDF documents based on control sheets",
+                                    text="Procesar y dividir documentos PDF basados en hojas de control",
                                     font=('Arial', 9),
                                     foreground='#7f8c8d')
         subtitle_label.pack(pady=(5, 0))
@@ -176,28 +175,28 @@ class PDFApp:
     def create_input_section(self, parent):
         """Create file input section"""
         # Files section
-        files_frame = ttk.LabelFrame(parent, text="Input Files", padding=15)
+        files_frame = ttk.LabelFrame(parent, text="Archivos de Entrada", padding=15)
         files_frame.grid(row=0, column=0, sticky="ew", pady=(0, 15))
         files_frame.grid_columnconfigure(1, weight=1)
         
-        self.create_file_input(files_frame, "Control PDF:", self.control_path, 0)
-        self.create_file_input(files_frame, "Main PDF:", self.main_path, 1)
+        self.create_file_input(files_frame, "PDF de Control:", self.control_path, 0)
+        self.create_file_input(files_frame, "PDF Principal:", self.main_path, 1)
         
         # Output section
-        output_frame = ttk.LabelFrame(parent, text="Output", padding=15)
+        output_frame = ttk.LabelFrame(parent, text="Salida", padding=15)
         output_frame.grid(row=1, column=0, sticky="ew", pady=(0, 15))
         output_frame.grid_columnconfigure(1, weight=1)
         
-        self.create_folder_input(output_frame, "Output Directory:", self.output_dir, 0)
+        self.create_folder_input(output_frame, "Directorio de Salida:", self.output_dir, 0)
 
     def create_config_section(self, parent):
         """Create configuration section"""
-        config_frame = ttk.LabelFrame(parent, text="Configuration", padding=15)
+        config_frame = ttk.LabelFrame(parent, text="Configuración", padding=15)
         config_frame.grid(row=2, column=0, sticky="ew", pady=(0, 15))
         config_frame.grid_columnconfigure(1, weight=1)
         
         # Start value input
-        ttk.Label(config_frame, text="Start Value:", style='Section.TLabel').grid(
+        ttk.Label(config_frame, text="Valor de Inicio:").grid(
             row=0, column=0, sticky="w", padx=(0, 10))
         
         start_entry = ttk.Entry(config_frame, textvariable=self.start_value, width=15)
@@ -205,14 +204,14 @@ class PDFApp:
         
         # Add tooltip-like help text
         help_text = ttk.Label(config_frame, 
-                                text="Starting number for document processing sequence",
+                                text="Número inicial para la secuencia de procesamiento de documentos",
                                 font=('Arial', 8),
                                 foreground='#95a5a6')
         help_text.grid(row=1, column=1, sticky="w", pady=(2, 0))
 
     def create_progress_section(self, parent):
         """Create progress tracking section"""
-        progress_frame = ttk.LabelFrame(parent, text="Processing Status", padding=15)
+        progress_frame = ttk.LabelFrame(parent, text="Estado del Procesamiento", padding=15)
         progress_frame.grid(row=3, column=0, sticky="ew", pady=(0, 15))
         progress_frame.grid_columnconfigure(0, weight=1)
         
@@ -221,7 +220,7 @@ class PDFApp:
         self.progress.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         
         # Status label
-        self.status_label = ttk.Label(progress_frame, text="Ready to process documents")
+        self.status_label = ttk.Label(progress_frame, text="Listo para procesar documentos")
         self.status_label.grid(row=1, column=0, sticky="w")
         
         # Progress details label
@@ -238,19 +237,19 @@ class PDFApp:
         button_frame.pack(anchor="center")
         
         # Process button
-        self.process_btn = ttk.Button(button_frame, text="Start Processing", 
+        self.process_btn = ttk.Button(button_frame, text="Iniciar Procesamiento", 
                                         command=self.run_processing,
                                         style='Processing.TButton')
         self.process_btn.pack(side="left", padx=(0, 10))
         
         # Cancel button (initially disabled)
-        self.cancel_btn = ttk.Button(button_frame, text="Cancel", 
+        self.cancel_btn = ttk.Button(button_frame, text="Cancelar", 
                                     command=self.cancel_processing,
                                     state="disabled")
         self.cancel_btn.pack(side="left", padx=(10, 0))
         
         # Clear button
-        clear_btn = ttk.Button(button_frame, text="Clear All", 
+        clear_btn = ttk.Button(button_frame, text="Limpiar Todo", 
                                 command=self.clear_all_fields)
         clear_btn.pack(side="left", padx=(10, 0))
 
@@ -265,11 +264,11 @@ class PDFApp:
         self.selected_page_num = None
 
         # Header
-        header_text = "Manual Record Correction - Review and Fix Classification Issues"
+        header_text = "Corrección Manual de Registros - Revisar y Corregir Problemas de Clasificación"
         ttk.Label(self.correction_frame, text=header_text, style='Title.TLabel').grid(row=0, column=0, pady=(0, 10))
         
         # Instructions label
-        instructions = "Records with issues are highlighted in red. Click on any page to preview and edit its classification."
+        instructions = "Los registros con problemas están resaltados en rojo. Haga clic en cualquier página para previsualizar y editar su clasificación."
         ttk.Label(self.correction_frame, text=instructions, font=('Arial', 9), 
                 foreground='#7f8c8d').grid(row=0, column=0, pady=(25, 10), sticky="w")
         
@@ -288,9 +287,9 @@ class PDFApp:
         
         # Treeview for records
         self.records_tree = ttk.Treeview(tree_frame, columns=("PageType", "Issues"), show="tree headings", height=15)
-        self.records_tree.heading("#0", text="Record / Page")
-        self.records_tree.heading("PageType", text="Classification")
-        self.records_tree.heading("Issues", text="Issues")
+        self.records_tree.heading("#0", text="Registro / Página")
+        self.records_tree.heading("PageType", text="Clasificación")
+        self.records_tree.heading("Issues", text="Problemas")
         
         # Configure column widths
         self.records_tree.column("#0", width=250, minwidth=200)
@@ -313,12 +312,12 @@ class PDFApp:
         right_frame.grid_rowconfigure(1, weight=0)
         
         # Preview frame
-        preview_frame = ttk.LabelFrame(right_frame, text="Page Preview", padding=10)
+        preview_frame = ttk.LabelFrame(right_frame, text="Vista Previa de Página", padding=10)
         preview_frame.grid(row=0, column=0, sticky="nsew", pady=(0, 10))
         preview_frame.grid_columnconfigure(0, weight=1)
         preview_frame.grid_rowconfigure(1, weight=1)
         
-        self.preview_label = ttk.Label(preview_frame, text="Select a page to preview", 
+        self.preview_label = ttk.Label(preview_frame, text="Seleccione una página para previsualizar", 
                                     font=('Arial', 10), foreground='#7f8c8d')
         self.preview_label.grid(row=0, column=0, pady=(0, 10))
         
@@ -327,12 +326,12 @@ class PDFApp:
         self.preview_canvas.grid(row=1, column=0, sticky="nsew")
         
         # Editing controls frame
-        edit_frame = ttk.LabelFrame(right_frame, text="Change Classification", padding=10)
+        edit_frame = ttk.LabelFrame(right_frame, text="Cambiar Clasificación", padding=10)
         edit_frame.grid(row=1, column=0, sticky="ew")
         edit_frame.grid_columnconfigure(0, weight=1)
         
         # Current type display
-        self.current_type_label = ttk.Label(edit_frame, text="Select a page to edit", 
+        self.current_type_label = ttk.Label(edit_frame, text="Seleccione una página para editar", 
                                         font=('Arial', 10, 'bold'))
         self.current_type_label.grid(row=0, column=0, pady=(0, 10))
         
@@ -370,7 +369,7 @@ class PDFApp:
         self.type_buttons.append(recibo_btn)
         
         # Unknown button
-        unknown_btn = ttk.Button(button_frame, text="Unknown/Other", 
+        unknown_btn = ttk.Button(button_frame, text="Desconocido/Otro", 
                                 command=lambda: self._change_page_type(PageType.UNKNOWN),
                                 state="disabled")
         unknown_btn.pack(side="top", fill="x", pady=2)
@@ -391,10 +390,10 @@ class PDFApp:
         btn_frame = ttk.Frame(self.correction_frame)
         btn_frame.grid(row=3, column=0, pady=(10, 0))
 
-        apply_btn = ttk.Button(btn_frame, text="Apply Changes and Continue", command=self.apply_corrections)
+        apply_btn = ttk.Button(btn_frame, text="Aplicar Cambios y Continuar", command=self.apply_corrections)
         apply_btn.pack(side="left", padx=5)
 
-        proceed_anyway_btn = ttk.Button(btn_frame, text="Proceed Without Changes", command=self.proceed_without_corrections)
+        proceed_anyway_btn = ttk.Button(btn_frame, text="Continuar Sin Cambios", command=self.proceed_without_corrections)
         proceed_anyway_btn.pack(side="left", padx=5)
 
         # Initially hide this frame
@@ -436,7 +435,7 @@ class PDFApp:
         
         # Separate records with and without issues
         for i, record in enumerate(patient_records):
-            folder_name = folder_names[i] if i < len(folder_names) else "NO FOLDER"
+            folder_name = folder_names[i] if i < len(folder_names) else "SIN CARPETA"
             record_info = (i, record, folder_name)
             
             if record.has_issues:
@@ -450,7 +449,7 @@ class PDFApp:
             issues_text = self._format_issues_text(record)
             
             record_node = self.records_tree.insert("", "end", 
-                                                text=f"[ISSUE] Record {i+1} ({folder_name})", 
+                                                text=f"[PROBLEMA] Registro {i+1} ({folder_name})", 
                                                 values=("", issues_text),
                                                 tags=("error_record",))
             
@@ -459,15 +458,15 @@ class PDFApp:
         # Add separator if both types exist
         if records_with_issues and records_without_issues:
             self.records_tree.insert("", "end", 
-                                    text="── Records Without Issues ──", 
+                                    text="── Registros Sin Problemas ──", 
                                     values=("", ""),
                                     tags=("separator",))
         
         # Add records without issues
         for i, record, folder_name in records_without_issues:
             record_node = self.records_tree.insert("", "end", 
-                                                text=f"[OK] Record {i+1} ({folder_name})", 
-                                                values=("", "No issues"),
+                                                text=f"[OK] Registro {i+1} ({folder_name})", 
+                                                values=("", "Sin problemas"),
                                                 tags=("good_record",))
             
             self._add_pages_to_record_node(record_node, record, pages_map)
@@ -484,14 +483,14 @@ class PDFApp:
         error_count = len(records_with_issues)
         
         self.summary_label.config(
-            text=f"Total: {total_records} records | Issues found: {error_count} records | "
-                f"Click any page to preview, then use buttons to change classification"
+            text=f"Total: {total_records} registros | Problemas encontrados: {error_count} registros | "
+                f"Haga clic en cualquier página para previsualizar, luego use los botones para cambiar la clasificación"
         )
         
         # Expand records with issues automatically
         for child in self.records_tree.get_children():
             item_text = self.records_tree.item(child, "text")
-            if "[ISSUE]" in item_text:
+            if "[PROBLEMA]" in item_text:
                 self.records_tree.item(child, open=True)
 
     def _format_issues_text(self, record):
@@ -503,7 +502,7 @@ class PDFApp:
                 issues_text = issues_text[:77] + "..."
             return issues_text
         else:
-            return "Unknown issues"
+            return "Problemas desconocidos"
 
     def _add_pages_to_record_node(self, record_node, record, pages_map):
         """Helper method to add pages to a record node in the treeview."""
@@ -526,13 +525,13 @@ class PDFApp:
                 
                 # Use clear text indicators instead of emojis
                 if is_unknown:
-                    page_icon = "[NEEDS REVIEW]"
+                    page_icon = "[REQUIERE REVISIÓN]"
                     tag = "unknown_page"
                 else:
                     page_icon = ""
                     tag = "normal_page"
                 
-                display_text = f"  Page {page_num} {page_icon}".strip()
+                display_text = f"  Página {page_num} {page_icon}".strip()
                 
                 # Create page node - don't try to set column #0 afterwards
                 page_node = self.records_tree.insert(record_node, "end", 
@@ -562,7 +561,7 @@ class PDFApp:
         # Extract page number from text
         item_text = self.records_tree.item(item_id, "text")
         import re
-        match = re.search(r'Page (\d+)', item_text)
+        match = re.search(r'Página (\d+)', item_text)
         if not match:
             return
         
@@ -579,7 +578,7 @@ class PDFApp:
     def _update_editing_controls(self, current_type):
         """Update the editing control buttons."""
         # Update the current type label
-        self.current_type_label.config(text=f"Current: {current_type}")
+        self.current_type_label.config(text=f"Actual: {current_type}")
         
         # Enable all buttons
         for btn in self.type_buttons:
@@ -611,13 +610,13 @@ class PDFApp:
         # Update visual feedback
         item_text = self.records_tree.item(item_id, "text")
         if new_type == PageType.UNKNOWN:
-            if "[NEEDS REVIEW]" not in item_text:
-                updated_text = item_text + " [NEEDS REVIEW]"
+            if "[REQUIERE REVISIÓN]" not in item_text:
+                updated_text = item_text + " [REQUIERE REVISIÓN]"
                 self.records_tree.item(item_id, text=updated_text)
             self.records_tree.item(item_id, tags=("unknown_page",))
         else:
-            if "[NEEDS REVIEW]" in item_text:
-                updated_text = item_text.replace(" [NEEDS REVIEW]", "")
+            if "[REQUIERE REVISIÓN]" in item_text:
+                updated_text = item_text.replace(" [REQUIERE REVISIÓN]", "")
                 self.records_tree.item(item_id, text=updated_text)
             self.records_tree.item(item_id, tags=("normal_page",))
         
@@ -625,7 +624,7 @@ class PDFApp:
         self._update_editing_controls(new_type.name)
         
         # Show feedback
-        self.edit_feedback_label.config(text=f"Changed to {new_type.name}", foreground="#27ae60")
+        self.edit_feedback_label.config(text=f"Cambiado a {new_type.name}", foreground="#27ae60")
         self.root.after(2000, lambda: self.edit_feedback_label.config(text=""))
 
     def apply_corrections(self):
@@ -662,7 +661,7 @@ class PDFApp:
         
         # Extract page number
         import re
-        match = re.search(r'Page (\d+)', item_text)
+        match = re.search(r'Página (\d+)', item_text)
         if not match:
             return
         
@@ -670,7 +669,7 @@ class PDFApp:
         page_type = self.records_tree.set(item_id, "PageType")
         
         # Update preview label
-        self.preview_label.config(text=f"Page {page_num} - {page_type}")
+        self.preview_label.config(text=f"Página {page_num} - {page_type}")
         
         # Clear canvas
         self.preview_canvas.delete("all")
@@ -679,7 +678,7 @@ class PDFApp:
         main_pdf_path = self.main_path.get()
         if not main_pdf_path or not os.path.exists(main_pdf_path):
             self.preview_canvas.create_text(125, 175, 
-                                            text="Main PDF not available\nfor preview", 
+                                            text="PDF principal no disponible\npara vista previa", 
                                             justify=tk.CENTER, fill="#666666", font=("Arial", 10))
             return
         
@@ -719,7 +718,7 @@ class PDFApp:
             self.root.after(0, self._update_preview_canvas, photo, new_width, new_height)
             
         except Exception as e:
-            error_msg = f"Failed to load preview:\n{str(e)}"
+            error_msg = f"Error al cargar vista previa:\n{str(e)}"
             self.root.after(0, self._show_preview_error, error_msg)
 
     def _update_preview_canvas(self, photo, img_width, img_height):
@@ -760,7 +759,7 @@ class PDFApp:
 
     def create_file_input(self, parent, label_text, variable, row):
         """Create a file input row with label, entry, and browse button"""
-        ttk.Label(parent, text=label_text, style='Section.TLabel').grid(
+        ttk.Label(parent, text=label_text).grid(
             row=row*2, column=0, sticky="w", padx=(0, 10), pady=(0, 10))
         
         entry_frame = ttk.Frame(parent)
@@ -770,7 +769,7 @@ class PDFApp:
         entry = ttk.Entry(entry_frame, textvariable=variable)
         entry.grid(row=0, column=0, sticky="ew", padx=(0, 10))
         
-        browse_btn = ttk.Button(entry_frame, text="Browse", 
+        browse_btn = ttk.Button(entry_frame, text="Examinar", 
                                 command=lambda: self.select_file(variable))
         browse_btn.grid(row=0, column=1)
         
@@ -783,9 +782,9 @@ class PDFApp:
             path = variable.get()
             if path:
                 filename = os.path.basename(path)
-                path_label.config(text=f"Selected: {filename}")
+                path_label.config(text=f"Seleccionado: {filename}")
             else:
-                path_label.config(text="No file selected")
+                path_label.config(text="Ningún archivo seleccionado")
         
         variable.trace('w', update_path_display)
         update_path_display()  # Initial call
@@ -802,7 +801,7 @@ class PDFApp:
         entry = ttk.Entry(entry_frame, textvariable=variable)
         entry.grid(row=0, column=0, sticky="ew", padx=(0, 10))
         
-        browse_btn = ttk.Button(entry_frame, text="Browse", 
+        browse_btn = ttk.Button(entry_frame, text="Examinar", 
                                 command=lambda: self.select_folder(variable))
         browse_btn.grid(row=0, column=1)
         
@@ -815,9 +814,9 @@ class PDFApp:
             path = variable.get()
             if path:
                 folder_name = os.path.basename(path) or path
-                path_label.config(text=f"Output to: {folder_name}")
+                path_label.config(text=f"Salida a: {folder_name}")
             else:
-                path_label.config(text="No folder selected")
+                path_label.config(text="Ninguna carpeta seleccionada")
         
         variable.trace('w', update_path_display)
         update_path_display()  # Initial call
@@ -825,8 +824,8 @@ class PDFApp:
     def select_file(self, variable):
         """Open file dialog for PDF selection"""
         path = filedialog.askopenfilename(
-            title="Select PDF File",
-            filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")],
+            title="Seleccionar Archivo PDF",
+            filetypes=[("Archivos PDF", "*.pdf"), ("Todos los archivos", "*.*")],
             initialdir=os.getcwd()
         )
         if path:
@@ -835,7 +834,7 @@ class PDFApp:
     def select_folder(self, variable):
         """Open folder dialog for output directory selection"""
         path = filedialog.askdirectory(
-            title="Select Output Directory",
+            title="Seleccionar Directorio de Salida",
             initialdir=os.getcwd()
         )
         if path:
@@ -846,26 +845,26 @@ class PDFApp:
         errors = []
         
         if not self.control_path.get().strip():
-            errors.append("Control PDF file is required")
+            errors.append("Se requiere el archivo PDF de control")
         elif not os.path.isfile(self.control_path.get()):
-            errors.append("Control PDF file does not exist")
+            errors.append("El archivo PDF de control no existe")
         
         if not self.main_path.get().strip():
-            errors.append("Main PDF file is required")
+            errors.append("Se requiere el archivo PDF principal")
         elif not os.path.isfile(self.main_path.get()):
-            errors.append("Main PDF file does not exist")
+            errors.append("El archivo PDF principal no existe")
         
         if not self.output_dir.get().strip():
-            errors.append("Output directory is required")
+            errors.append("Se requiere el directorio de salida")
         elif not os.path.isdir(self.output_dir.get()):
-            errors.append("Output directory does not exist")
+            errors.append("El directorio de salida no existe")
         
         try:
             start_val = int(self.start_value.get())
             if start_val < 0:
-                errors.append("Start value must be a positive number")
+                errors.append("El valor de inicio debe ser un número positivo")
         except ValueError:
-            errors.append("Start value must be a valid number")
+            errors.append("El valor de inicio debe ser un número válido")
         
         return errors
 
@@ -880,19 +879,19 @@ class PDFApp:
             self.progress['value'] = current
 
             status_messages = {
-                "processing_control_sheet": f"Processing control sheet... {details}",
-                "splitting_main_pdf": f"Splitting main PDF... {details}",
-                "workflow_completed": "Processing completed successfully!"
+                "processing_control_sheet": f"Procesando hoja de control... {details}",
+                "splitting_main_pdf": f"Dividiendo PDF principal... {details}",
+                "workflow_completed": "¡Procesamiento completado exitosamente!"
             }
 
-            status = status_messages.get(step, f"Processing: {step}")
+            status = status_messages.get(step, f"Procesando: {step}")
             self.status_label.config(text=status)
             
             # Update details
             if details:
-                self.details_label.config(text=f"Details: {details}")
+                self.details_label.config(text=f"Detalles: {details}")
             else:
-                progress_text = f"Progress: {current}/{total}"
+                progress_text = f"Progreso: {current}/{total}"
                 if total > 0:
                     percentage = (current / total) * 100
                     progress_text += f" ({percentage:.1f}%)"
@@ -905,10 +904,10 @@ class PDFApp:
         self.processing = processing
 
         if processing:
-            self.process_btn.config(state="disabled", text="Processing...")
+            self.process_btn.config(state="disabled", text="Procesando...")
             self.cancel_btn.config(state="normal")
         else:
-            self.process_btn.config(state="normal", text="Start Processing")
+            self.process_btn.config(state="normal", text="Iniciar Procesamiento")
             self.cancel_btn.config(state="disabled")
 
     def run_processing(self):
@@ -916,8 +915,8 @@ class PDFApp:
         # Validate inputs
         errors = self.validate_inputs()
         if errors:
-            error_message = "Please fix the following issues:\n\n" + "\n".join(f"• {error}" for error in errors)
-            messagebox.showerror("Validation Error", error_message)
+            error_message = "Por favor corrija los siguientes problemas:\n\n" + "\n".join(f"• {error}" for error in errors)
+            messagebox.showerror("Error de Validación", error_message)
             return
         
         try:
@@ -927,7 +926,7 @@ class PDFApp:
 
         # Update UI state
         self.set_processing_state(True)
-        self.update_progress("starting", 0, 100, "Initializing...")
+        self.update_progress("starting", 0, 100, "Inicializando...")
 
         # Start processing in background thread
         self.processing_thread = threading.Thread(
@@ -953,20 +952,20 @@ class PDFApp:
             
             def on_success():
                 self.set_processing_state(False)
-                self.update_progress("completed", 100, 100, "All documents processed")
-                messagebox.showinfo("Processing Complete", 
-                                    f"Successfully processed {len(microchip_ids)} document folders.\n\n"
-                                    f"Output saved to: {output}")
+                self.update_progress("completed", 100, 100, "Todos los documentos procesados")
+                messagebox.showinfo("Procesamiento Completado", 
+                                    f"Se procesaron exitosamente {len(microchip_ids)} carpetas de documentos.\n\n"
+                                    f"Salida guardada en: {output}")
             
             self.root.after(0, on_success)
 
         except Exception as e:
             def on_error(exc):
                 self.set_processing_state(False)
-                self.status_label.config(text="Processing failed")
+                self.status_label.config(text="Procesamiento falló")
                 self.details_label.config(text=f"Error: {str(exc)}")
-                messagebox.showerror("Processing Error", 
-                                    f"An error occurred during processing:\n\n{str(exc)}")
+                messagebox.showerror("Error de Procesamiento", 
+                                    f"Ocurrió un error durante el procesamiento:\n\n{str(exc)}")
             
             self.root.after(0, on_error, e)
 
@@ -975,20 +974,20 @@ class PDFApp:
         if self.processing:
             # Note: This is a simple cancel - you might want to implement
             # proper thread cancellation in your processing function
-            result = messagebox.askyesno("Cancel Processing", 
-                                        "Are you sure you want to cancel the current operation?")
+            result = messagebox.askyesno("Cancelar Procesamiento", 
+                                        "¿Está seguro de que desea cancelar la operación actual?")
             
             if result:
                 self.set_processing_state(False)
-                self.status_label.config(text="Processing cancelled by user")
+                self.status_label.config(text="Procesamiento cancelado por el usuario")
                 self.details_label.config(text="")
                 self.progress['value'] = 0
 
     def clear_all_fields(self):
         """Clear all input fields"""
         if self.processing:
-            messagebox.showwarning("Cannot Clear", 
-                                    "Cannot clear fields while processing is active.")
+            messagebox.showwarning("No se Puede Limpiar", 
+                                    "No se pueden limpiar los campos mientras el procesamiento está activo.")
             return
         
         self.control_path.set("")
@@ -996,6 +995,6 @@ class PDFApp:
         self.output_dir.set("")
         self.start_value.set("1")
         
-        self.status_label.config(text="Ready to process documents")
+        self.status_label.config(text="Listo para procesar documentos")
         self.details_label.config(text="")
         self.progress['value'] = 0
