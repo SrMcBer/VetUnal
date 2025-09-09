@@ -65,7 +65,7 @@ class MainPDFProcessor:
             pages = self.pdf_processor.scan_all_pages(main_pdf_path, progress_callback)
             
             # Export original pages for testing
-            export_pages_for_testing(pages, "original_pages")
+            # export_pages_for_testing(pages, "original_pages")
             
             # Save initial classification results
             self._save_classification_debug(pages, debug_dir, f"{pdf_name}_{timestamp}_01_initial_classification.txt")
